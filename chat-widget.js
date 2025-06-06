@@ -250,7 +250,7 @@
             width: 24px;
             height: 24px;
             fill: currentColor;
-			position:absolute;
+            position:absolute;
         }
 
         .n8n-chat-widget .chat-footer {
@@ -308,28 +308,42 @@
             backgroundColor: '#ffffff',
             fontColor: '#333333'
         },
-		lang:''
+        lang: '',
+        autoStart: false,
+        autoStartDelay: 10000
     };
 
     // Merge user config with defaults
-    const config = window.ChatWidgetConfig ? 
-        {
-            webhook: { ...defaultConfig.webhook, ...window.ChatWidgetConfig.webhook },
-            branding: { ...defaultConfig.branding, ...window.ChatWidgetConfig.branding },
-            style: { ...defaultConfig.style, ...window.ChatWidgetConfig.style }
-        } : defaultConfig;
+    const userConfig = window.ChatWidgetConfig || {};
+    const config = {
+        webhook: { ...defaultConfig.webhook, ...(userConfig.webhook || {}) },
+        branding: { ...defaultConfig.branding, ...(userConfig.branding || {}) },
+        style: { ...defaultConfig.style, ...(userConfig.style || {}) },
+        lang: userConfig.lang !== undefined ? userConfig.lang : defaultConfig.lang,
+        autoStart: userConfig.autoStart !== undefined ? userConfig.autoStart : defaultConfig.autoStart,
+        autoStartDelay: userConfig.autoStartDelay !== undefined ? userConfig.autoStartDelay : defaultConfig.autoStartDelay
+    };
 
     // Prevent multiple initializations
     if (window.N8NChatWidgetInitialized) return;
     window.N8NChatWidgetInitialized = true;
 
-    let currentSessionId = '';
+    // Function to generate UUID
+    function generateUUID() {
+        return crypto.randomUUID();
+    }
+
+    // Initialize currentSessionId from localStorage or generate a new one
+    let currentSessionId = localStorage.getItem('n8nChatWidgetSessionId');
+    if (!currentSessionId) {
+        currentSessionId = generateUUID();
+        localStorage.setItem('n8nChatWidgetSessionId', currentSessionId);
+    }
 
     // Create widget container
     const widgetContainer = document.createElement('div');
     widgetContainer.className = 'n8n-chat-widget';
     
-    // Set CSS variables for colors
     widgetContainer.style.setProperty('--n8n-chat-primary-color', config.style.primaryColor);
     widgetContainer.style.setProperty('--n8n-chat-secondary-color', config.style.secondaryColor);
     widgetContainer.style.setProperty('--n8n-chat-background-color', config.style.backgroundColor);
@@ -393,19 +407,17 @@
     const textarea = chatContainer.querySelector('textarea');
     const sendButton = chatContainer.querySelector('button[type="submit"]');
 
-    function generateUUID() {
-        return crypto.randomUUID();
-    }
-
     async function startNewConversation() {
-        currentSessionId = generateUUID();
+        // currentSessionId is now taken from the global scope (initialized from localStorage or generated once)
         const data = [{
             action: "loadPreviousSession",
-            sessionId: currentSessionId,
+            sessionId: currentSessionId, // Use the persistent session ID
             route: config.webhook.route,
             metadata: {
                 userId: "",
-				lang: config.lang
+                lang: config.lang,
+                pageTitle: document.title,
+                pageUrl: window.location.href
             }
         }];
 
@@ -419,8 +431,12 @@
             });
 
             const responseData = await response.json();
-            chatContainer.querySelector('.brand-header').style.display = 'none';
             chatContainer.querySelector('.new-conversation').style.display = 'none';
+            const initialBrandHeader = chatContainer.querySelector('.new-conversation').previousElementSibling;
+            if (initialBrandHeader && initialBrandHeader.classList.contains('brand-header')) {
+                initialBrandHeader.style.display = 'none';
+            }
+            
             chatInterface.classList.add('active');
 
             const botMessageDiv = document.createElement('div');
@@ -436,12 +452,13 @@
     async function sendMessage(message) {
         const messageData = {
             action: "sendMessage",
-            sessionId: currentSessionId,
+            sessionId: currentSessionId, // Use the persistent session ID
             route: config.webhook.route,
             chatInput: message,
             metadata: {
                 userId: "",
-				lang:config.lang
+                pageTitle: document.title,
+                pageUrl: window.location.href
             }
         };
 
@@ -467,7 +484,7 @@
             botMessageDiv.textContent = Array.isArray(data) ? data[0].output : data.output;
             messagesContainer.appendChild(botMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        } catch (error) {
+        } catch (error)
             console.error('Error:', error);
         }
     }
@@ -497,11 +514,21 @@
         chatContainer.classList.toggle('open');
     });
 
-    // Add close button handlers
     const closeButtons = chatContainer.querySelectorAll('.close-button');
     closeButtons.forEach(button => {
         button.addEventListener('click', () => {
             chatContainer.classList.remove('open');
         });
     });
+
+    // Auto-start logic (uses sessionStorage for once-per-tab-session auto-open/start)
+    if (config.autoStart && !sessionStorage.getItem('chatWidgetAutoStarted')) {
+        setTimeout(() => {
+            chatContainer.classList.add('open');
+            if (!chatInterface.classList.contains('active')) {
+                startNewConversation(); 
+            }
+            sessionStorage.setItem('chatWidgetAutoStarted', 'true');
+        }, config.autoStartDelay);
+    }
 })();
