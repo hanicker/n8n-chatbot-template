@@ -484,7 +484,7 @@
             botMessageDiv.textContent = Array.isArray(data) ? data[0].output : data.output;
             messagesContainer.appendChild(botMessageDiv);
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
-        } catch (error)
+        } catch (error) {
             console.error('Error:', error);
         }
     }
