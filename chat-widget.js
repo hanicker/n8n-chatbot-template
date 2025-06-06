@@ -250,6 +250,7 @@
             width: 24px;
             height: 24px;
             fill: currentColor;
+			position:absolute;
         }
 
         .n8n-chat-widget .chat-footer {
@@ -306,7 +307,8 @@
             position: 'right',
             backgroundColor: '#ffffff',
             fontColor: '#333333'
-        }
+        },
+		lang:''
     };
 
     // Merge user config with defaults
@@ -402,7 +404,8 @@
             sessionId: currentSessionId,
             route: config.webhook.route,
             metadata: {
-                userId: ""
+                userId: "",
+				lang: config.lang
             }
         }];
 
