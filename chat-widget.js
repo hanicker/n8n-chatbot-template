@@ -440,7 +440,8 @@
             route: config.webhook.route,
             chatInput: message,
             metadata: {
-                userId: ""
+                userId: "",
+				lang:config.lang
             }
         };
 
