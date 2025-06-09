@@ -15,6 +15,12 @@
             // Aggiungi altre traduzioni qui se necessario
         }
     };
+	
+	
+	// Load marked.js for Markdown parsing
+    const markedScript = document.createElement('script');
+    markedScript.src = 'https://cdn.jsdelivr.net/npm/marked/marked.min.js';
+    document.head.appendChild(markedScript);
 
     let currentLanguage = 'en'; // Default language
     let i18nResources = {};
@@ -105,7 +111,8 @@
             right: 20px;
             z-index: 1000;
             display: none;
-            width: 380px;
+            width: 480px;
+			max-width:calc(100% - 30px);
             height: 600px;
             background: var(--chat--color-background);
             border-radius: 12px;
@@ -365,6 +372,16 @@
         .n8n-chat-widget .chat-footer a:hover {
             opacity: 1;
         }
+		
+		
+		/* --- FIX: Styles for Markdown content --- */
+        .n8n-chat-widget .chat-message.bot p { margin: 0 0 0.5em 0; }
+		.n8n-chat-widget .chat-message.bot p:last { margin: 0 0 0 0; }
+        .n8n-chat-widget .chat-message.bot p:last-child { margin-bottom: 0; }
+        .n8n-chat-widget .chat-message.bot ul, .n8n-chat-widget .chat-message.bot ol { padding-left: 20px; margin: 0.5em 0; }
+        .n8n-chat-widget .chat-message.bot li { margin-bottom: 0.25em; }
+        .n8n-chat-widget .chat-message.bot strong { font-weight: 600; }
+        .n8n-chat-widget .chat-message.bot a { color: var(--chat--color-primary); text-decoration: underline; }		
     `;
     // Load Geist font
     const fontLink = document.createElement('link');
@@ -542,9 +559,14 @@
 
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'chat-message bot';
-            botMessageDiv.textContent = Array.isArray(responseData) ? responseData[0].output : responseData.output;
+			let botcontent = Array.isArray(responseData) ? responseData[0].output : responseData.output;
+			if (window.marked) {
+                botcontent = window.marked.parse(botcontent);
+			}
+            botMessageDiv.innerHTML = botcontent;
             messagesContainer.appendChild(botMessageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            messagesContainer.scrollTop = botMessageDiv.offsetTop - 70;
+            //messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error('Error starting new conversation:', error);
         }
@@ -584,9 +606,14 @@
             
             const botMessageDiv = document.createElement('div');
             botMessageDiv.className = 'chat-message bot';
-            botMessageDiv.textContent = Array.isArray(data) ? data[0].output : data.output;
+			let botcontent = Array.isArray(data) ? data[0].output : data.output;
+			if (window.marked) {
+                botcontent = window.marked.parse(botcontent);
+			}
+			botMessageDiv.innerHTML = botcontent;
             messagesContainer.appendChild(botMessageDiv);
-            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            messagesContainer.scrollTop = botMessageDiv.offsetTop - 70;
+			//messagesContainer.scrollTop = messagesContainer.scrollHeight-40;
         } catch (error) {
             console.error('Error sending message:', error);
             // Optionally display an error message to the user in the chat
